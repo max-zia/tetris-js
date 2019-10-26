@@ -22,13 +22,14 @@ class TetrisGame {
 
 	/** Draws the board to the screen. */
 	drawBoard() {
-		// Set XML namespace
-		var xmlns = "http://www.w3.org/2000/svg";
+		// Set XML namespace and svg var
+        var xmlns = "http://www.w3.org/2000/svg";
+        var svg = document.getElementById("target");
 
-		// Set the ID for the board
+        // MAIN BOARD
 		var g = document.createElementNS(xmlns, "g");
 		g.setAttribute("id", "tetrisBoard");
-		document.getElementById("target").appendChild(g);
+		svg.appendChild(g);
 
 		// Create the board
 		var board = document.createElementNS(xmlns, "rect");
@@ -39,7 +40,55 @@ class TetrisGame {
 		board.setAttribute("fill", "none");
 		board.setAttribute("stroke", "black");
 		board.setAttribute("stroke-width", 1.25);
-		g.appendChild(board);
+        g.appendChild(board);
+
+        // HOLD BOARD
+        var g = document.createElementNS(xmlns, "g");
+		g.setAttribute("id", "holdBoard");
+        svg.appendChild(g);
+        
+        // Create the board
+        var holdBoard = document.createElementNS(xmlns, "rect");
+        holdBoard.setAttribute("x", 290);
+		holdBoard.setAttribute("y", 20);
+		holdBoard.setAttribute("width", 180);
+		holdBoard.setAttribute("height", 100);
+		holdBoard.setAttribute("fill", "none");
+		holdBoard.setAttribute("stroke", "black");
+        holdBoard.setAttribute("stroke-width", 1.25);
+        g.appendChild(holdBoard);
+        
+        // SHOW NEXT BOARD
+        var g = document.createElementNS(xmlns, "g");
+		g.setAttribute("id", "showNextBoard");
+        svg.appendChild(g);
+        
+        // Create the board
+        var showNextBoard = document.createElementNS(xmlns, "rect");
+        showNextBoard.setAttribute("x", 290);
+		showNextBoard.setAttribute("y", 135);
+		showNextBoard.setAttribute("width", 180);
+		showNextBoard.setAttribute("height", 100);
+		showNextBoard.setAttribute("fill", "none");
+		showNextBoard.setAttribute("stroke", "black");
+        showNextBoard.setAttribute("stroke-width", 1.25);
+        g.appendChild(showNextBoard);
+
+        // SCORE BOARD
+        var g = document.createElementNS(xmlns, "g");
+		g.setAttribute("id", "scoreBoard");
+        svg.appendChild(g);
+
+        // Create the board
+        var scoreBoard = document.createElementNS(xmlns, "rect");
+        scoreBoard.setAttribute("x", 290);
+		scoreBoard.setAttribute("y", 250);
+		scoreBoard.setAttribute("width", 180);
+		scoreBoard.setAttribute("height", 100);
+		scoreBoard.setAttribute("fill", "none");
+		scoreBoard.setAttribute("stroke", "black");
+        scoreBoard.setAttribute("stroke-width", 1.25);
+        g.appendChild(scoreBoard);
 	}
 
 	/** Adds event listener to control user inputs. */
@@ -160,6 +209,15 @@ class TetrisGame {
         return lost;
     }
 
+    /** Updates score board. */
+    updateScoreBoard() {
+        var lines = document.getElementById("lineClears");
+        var tetrises = document.getElementById("tetrisClears");
+
+        lines.textContent = `Line Clears: ${this.lineClears}`; 
+        tetrises.textContent = `Tetris Clears: ${this.tetrisClears}`;
+    }
+
 	/** Starts the game. */
 	async run() {
 		var atBottom = false;
@@ -169,20 +227,35 @@ class TetrisGame {
 		this.activateInput();					// initialise inputs
         this.currentBlock = this.blocks[0];		// initialise current block
 
-		// game loop
+		// main game loop
 		while (!(this.exit)) {
 
+            // check loss condition
             if (this.playerLost()) {
                 this.exit = true;
             }
 
+            // setup block for next drop loop
+            if (this.blockSet.length == 0) {
+                this.blockSet = [0, 1, 2, 3, 4, 5, 6];
+            }
+            var index = getRandomInt(0, (this.blockSet.length - 1));
+            var blockType = this.blockSet[index];
+            this.blockSet.splice(index, 1);
+            blockId++;
+            this.blocks.push(new Block(16, 2, 104, 10, blockType, blockId));
+
+            // draw next block
+            this.blocks[this.blocks.length - 1].showNext();
+
+            // draw current block
 			this.currentBlock.draw();
 
 			// drop loop
 			while ((!(this.exit)) & (!(atBottom))) {
 				atBottom = this.currentBlock.atBottom();
 
-				await sleep(200);
+				await sleep(250);
 				if (!(this.currentBlock.obstruction("below"))) {
 					this.currentBlock.descend();
 				} else {
@@ -190,25 +263,17 @@ class TetrisGame {
 				}
             }
             
-            // check lines and update scoring
+            // check for line clears and update scoring
             var roundScore = this.checkRows();
             if (roundScore == 4) {
                 this.tetrisClears++;
             }
             this.lineClears = this.lineClears + roundScore;
+            this.updateScoreBoard();
 
-			// setup blocks for next drop loop
-			if (this.blockSet.length == 0) {
-				this.blockSet = [0, 1, 2, 3, 4, 5, 6];
-			}
-
-			var index = getRandomInt(0, (this.blockSet.length - 1));
-			var blockType = this.blockSet[index];
-			this.blockSet.splice(index, 1);
-
-			blockId++;
-			this.blocks.push(new Block(16, 2, 104, 10, blockType, blockId));
-			this.currentBlock = this.blocks[this.blocks.length - 1];
+            // set up block for next drop loop
+            this.currentBlock = this.blocks[this.blocks.length - 1];
+            this.currentBlock.reset();
 
 			// restart drop loop
 			atBottom = false;

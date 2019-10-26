@@ -96,7 +96,47 @@ class Block {
 	hide() {
 		var block = document.getElementById(this.id);
 		block.parentNode.removeChild(block);
-	}
+    }
+    
+    /** Prints the block off-screen (for showing next block). */
+    showNext() {
+        var settings = {
+            "#00FFFF": 242,
+            "yellow": 260,
+            "blue": 250,
+            "orange": 250,
+            "red": 250,
+            "purple": 250,
+            "green": 250
+        }
+
+        this.coordinates.forEach(function(pair) {
+            pair[0] = pair[0] + settings[this.type[4]];
+            pair[1] = pair[1] + 170;
+        }, this);
+
+        this.draw();
+    }
+
+    /** Resets coordinates back to original after showNext() altered them. */
+    reset() {
+        var settings = {
+            "#00FFFF": 242,
+            "yellow": 260,
+            "blue": 250,
+            "orange": 250,
+            "red": 250,
+            "purple": 250,
+            "green": 250
+        }
+
+        this.hide();
+
+        this.coordinates.forEach(function(pair) {
+            pair[0] = pair[0] - settings[this.type[4]];
+            pair[1] = pair[1] - 170;
+        }, this);
+    }
 
 	/** 
 	 * Moves the Block one step in the Block's direction by adding
