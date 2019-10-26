@@ -120,11 +120,11 @@ class Block {
 
 		this.hide();
 
-		if ((this.direction == 1) & (xmin != 50)) {
+		if ((this.direction == 1) & (xmin != 50) & (!this.obstruction("left"))) {
 			this.coordinates.forEach(function(pair) {
 				pair[0] = pair[0] - (this.size + this.gapSize); 
 			}, this);
-		} else if ((this.direction == 2) & (xmax + 16 != 228)) {
+		} else if ((this.direction == 2) & (xmax + 16 != 228) & (!this.obstruction("right"))) {
 			this.coordinates.forEach(function(pair) {
 				pair[0] = pair[0] + (this.size + this.gapSize); 
 			}, this);
@@ -146,41 +146,87 @@ class Block {
 		}, this);
 
 		this.draw();
-	}
+    }
+    
+    /** Causes Block to descend as far as it can without obstruction. */
+    hardDrop() {
+        var flag = true;
+        
+        while (flag) {
+            var ymax = Math.max(
+                this.coordinates[0][1], 
+                this.coordinates[1][1], 
+                this.coordinates[2][1], 
+                this.coordinates[3][1]
+            );
+            if ((ymax < 315) & (!(this.obstruction("below")))) {
+                this.hide();
+                this.coordinates.forEach(function(pair) {
+                    pair[1] = pair[1] + (this.size + this.gapSize);
+                }, this);
+                this.draw();
+            } else {
+                flag = false;
+            }
+        }
+    }
 
 	/** Rotates the Block 90 degrees clockwise. */
 	rotate() {
-		// Get skew to ensure the Block aligns with 20x10 grid
-		if (!(this.rotation)) {
-			var skew = ((this.size + this.gapSize) / 2);
-		} else {
-			var skew = -((this.size + this.gapSize) / 2);
-		}
-		this.rotation = !(this.rotation);
+        var overrotation = 0;
+        var tPieceControl = 1;
 
-		// Get width and height of Block
-		var block = document.getElementById(this.id);
-		var width = block.getBoundingClientRect().width
-		var height = block.getBoundingClientRect().height
+        if (this.type[4] == "yellow") {
+            // pass
+        } else {
+            // Get skew to ensure the Block aligns with 20x10 grid
+            if (!(this.rotation)) {
+                var skew = ((this.size + this.gapSize) / 2);
+            } else {
+                var skew = -((this.size + this.gapSize) / 2);
+            }
+            this.rotation = !(this.rotation);
 
-		// Get the coordinates of the Block's pivot 
-		var px = []; var py = [];
-		this.coordinates.forEach(function(pair) {
-			px.push(pair[0]); py.push(pair[1]);
-		});
-		px = Math.min(...px) + (width / 2);
-		py = Math.min(...py) + (height / 2);
+            // Get width and height of Block
+            var block = document.getElementById(this.id);
+            var width = block.getBoundingClientRect().width
+            var height = block.getBoundingClientRect().height
 
-		// Implement the rotation
-		this.hide()
+            // Get the coordinates of the Block's pivot 
+            var px = []; var py = [];
+            this.coordinates.forEach(function(pair) {
+                px.push(pair[0]); py.push(pair[1]);
+            });
+            px = Math.min(...px) + (width / 2);
+            py = Math.min(...py) + (height / 2);
 
-		this.coordinates.forEach(function(pair) {
-			var tempx = pair[0];
-			pair[0] = (px + py - pair[1] - this.size) + skew;
-			pair[1] = (tempx + py - px) + skew;  
-		}, this);
+            // Implement the rotation
+            this.hide()
 
-		this.draw();
+            this.coordinates.forEach(function(pair) {
+                var tempx = pair[0];
+                pair[0] = (px + py - pair[1] - this.size) + skew;
+                pair[1] = (tempx + py - px) + skew;  
+
+                if (pair[0] < 50) {
+                    overrotation = 1;
+                } else if (pair[0] > 228) {
+                    overrotation = -1;
+                }
+            }, this);
+
+            // Correct for overrotation
+            if (overrotation != 0) {
+                if (this.type[4] == "#00FFFF") {
+                    tPieceControl = 2;
+                }
+                this.coordinates.forEach(function(pair) {
+                    pair[0] = pair[0] + (overrotation * (tPieceControl * 18));
+                });
+            }
+
+            this.draw();
+        }
 	}
 
 	/** Returns true if block has hit the lowest col of the board. */
@@ -201,16 +247,24 @@ class Block {
 	}
 
 	/** 
-	 * Checks to see whether an obstruction lies below the block. XPath queries
+	 * Checks to see whether an obstruction exists for the block. XPath queries
 	 * are used to check for blocks with coordinates that would match the 
-	 * position each square would descend to. 
+	 * position each square would move to. 
 	 */
-	obstruction() {
+	obstruction(where) {
 		var check = false;
 
 		this.coordinates.forEach(function(pair) {
-			var newx = pair[0];
-			var newy = pair[1] + this.size + this.gapSize;
+            if (where === "below") {
+                var newx = pair[0];
+                var newy = pair[1] + this.size + this.gapSize;
+            } else if (where === "right") {
+                var newx = pair[0] + this.size + this.gapSize;
+                var newy = pair[1];
+            } else {
+                var newx = pair[0] - this.size - this.gapSize;
+                var newy = pair[1];
+            }
 
 			var a = JSON.stringify(this.coordinates);
 			var b = JSON.stringify([newx, newy]);

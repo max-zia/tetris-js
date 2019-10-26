@@ -55,6 +55,9 @@ class TetrisGame {
 			} else if (e.code == "ArrowLeft") {
 				this.currentBlock.setDirection(1);
                 this.currentBlock.move();
+            
+            } else if (e.code == "ArrowDown") {
+                this.currentBlock.hardDrop();
 
             } else if (e.code == "KeyR") {
 				this.currentBlock.rotate();
@@ -129,20 +132,49 @@ class TetrisGame {
                 row = row - 18;
             }
         }
+        this.playLineSound(linesCleared);
         return linesCleared;
+    }
+
+    /** Plays audio corresponding to number of line clears. */
+    playLineSound(linesCleared) {
+        var lineClearAudio = new Audio('sounds/lineClear.wav'); 
+        var tetrisClearAudio = new Audio('sounds/tetrisClear.wav');
+        
+        if ((linesCleared > 0) & (linesCleared < 4)) {
+            lineClearAudio.play();
+        } else if (linesCleared == 4) {
+            tetrisClearAudio.play();
+        }
+    }
+
+    /** Checks to see whether player has lost. */
+    playerLost() {
+        var lost = false;
+
+        var square = getElementsByXPath("//*[@x='122'][@y='10']")[0];
+        if (square != null) {
+            lost = true;
+        }
+
+        return lost;
     }
 
 	/** Starts the game. */
 	async run() {
 		var atBottom = false;
-		var blockId = 1;
+        var blockId = 1;
 
 		this.drawBoard();						// initialise board
 		this.activateInput();					// initialise inputs
-		this.currentBlock = this.blocks[0];		// initialise current block
+        this.currentBlock = this.blocks[0];		// initialise current block
 
 		// game loop
 		while (!(this.exit)) {
+
+            if (this.playerLost()) {
+                this.exit = true;
+            }
 
 			this.currentBlock.draw();
 
@@ -151,7 +183,7 @@ class TetrisGame {
 				atBottom = this.currentBlock.atBottom();
 
 				await sleep(200);
-				if (!(this.currentBlock.obstruction())) {
+				if (!(this.currentBlock.obstruction("below"))) {
 					this.currentBlock.descend();
 				} else {
 					atBottom = true;
@@ -161,9 +193,9 @@ class TetrisGame {
             // check lines and update scoring
             var roundScore = this.checkRows();
             if (roundScore == 4) {
-                tetrisClears++;
+                this.tetrisClears++;
             }
-            lineClears = lineClears + roundScore;
+            this.lineClears = this.lineClears + roundScore;
 
 			// setup blocks for next drop loop
 			if (this.blockSet.length == 0) {
@@ -184,6 +216,8 @@ class TetrisGame {
 
 		// game loop exit
 		if (this.exit) {
+            var gameOverAudio = new Audio('sounds/gameOver.wav');
+            gameOverAudio.play();
 			console.log("Game Over");
 		}
 	}
