@@ -43,53 +43,12 @@ class Block {
 
 	/** Uses a 4x4 matrix to hold the sets of coordinates needed for Block. */
 	getCoordinates() {
-		var i = 0;
-		var dx = 0;
-		var gap = 0;
-		var coordinates = [[], [], [], []];
-
-		while (i < 4) {
-			if (this.type[i] < 4) {
-				dx = (this.x + (this.size * this.type[i]));
-				gap = (this.gapSize * this.type[i]);
-				coordinates[i].push(dx + gap);
-				coordinates[i].push(this.y);
-
-			} else {
-				dx = (this.x + (this.size * (this.type[i] - 4 )));
-				gap = (this.gapSize * (this.type[i] - 4));
-				coordinates[i].push(dx + gap);
-				coordinates[i].push(this.y + this.size + this.gapSize);
-			}
-			i++;
-		}
-		return coordinates;
+		return blockCoordinates(this.type, this.x, this.y, this.size, this.gapSize);
 	}
 
 	/** Draws the Block to the screen. */
 	draw() {
-		// Set XML namespace
-		var xmlns = "http://www.w3.org/2000/svg";
-
-		// Set the ID for the group of rects that'll hold the Block 
-		var g = document.createElementNS(xmlns, "g");
-		g.setAttribute("id", this.id);
-		document.getElementById("target").appendChild(g);
-
-		this.coordinates.forEach(function(pair) {
-			var square = document.createElementNS(xmlns, "rect");
-			square.setAttribute("x", pair[0]);
-			square.setAttribute("y", pair[1]);
-			square.setAttribute("rx", 1);
-			square.setAttribute("ry", 1);
-			square.setAttribute("width", this.size);
-			square.setAttribute("height", this.size);
-			square.setAttribute("id", this.id);
-			square.setAttribute("fill", this.type[4]);
-			square.setAttribute("stroke-width", 1.25);
-			square.setAttribute("stroke", "black");
-			g.appendChild(square);
-		}, this);
+        drawCoordinates(this.type, this.coordinates, this.id, this.size);
 	}
 
 	/** Removes the Block from the screen. */
@@ -97,8 +56,8 @@ class Block {
 		var block = document.getElementById(this.id);
 		block.parentNode.removeChild(block);
     }
-    
-    /** Prints the block off-screen (for showing next block). */
+
+    /** Prints Block off-screen (for showing next block). */
     showNext() {
         var settings = {
             "#00FFFF": 242,
@@ -118,24 +77,12 @@ class Block {
         this.draw();
     }
 
-    /** Resets coordinates back to original after showNext() altered them. */
+    /** Resets coordinates back to starting position. */
     reset() {
-        var settings = {
-            "#00FFFF": 242,
-            "yellow": 260,
-            "blue": 250,
-            "orange": 250,
-            "red": 250,
-            "purple": 250,
-            "green": 250
-        }
-
         this.hide();
-
-        this.coordinates.forEach(function(pair) {
-            pair[0] = pair[0] - settings[this.type[4]];
-            pair[1] = pair[1] - 170;
-        }, this);
+        this.x = 104;
+        this.y = 10;
+        this.coordinates = this.getCoordinates();
     }
 
 	/** 
