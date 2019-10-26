@@ -1,17 +1,19 @@
 /** 
  * Represents a Tetris game.
- *
- * Game loop involves one of every block falling from the top until obstructed,
- * or until it contacts bottom. Blocks can be moved left, right, and down, 
- * and rotated.
- *  
  */
 
 class TetrisGame {
 	
-	/** Constructs a new TetrisGame instance. */
+	/** 
+     * Constructs a new TetrisGame instance. Every block that falls during
+     * the game is added to the blocks array, while blockSet array ensures
+     * any sequence of seven blocks includes all tetromino types.  
+     */
 	constructor() {
-		this.exit = false;
+        this.exit = false;                  // true when the game is over
+        this.lineClears = 0                 // line clear score
+        this.tetrisClears = 0;              // tetris clear score
+
 		this.blockSet = [0, 1, 2, 3, 4, 5, 6];
 		this.currentBlock = 0;
 		this.blocks = [];
@@ -52,14 +54,83 @@ class TetrisGame {
 
 			} else if (e.code == "ArrowLeft") {
 				this.currentBlock.setDirection(1);
-				this.currentBlock.move();
+                this.currentBlock.move();
 
-			} else if (e.code == "KeyR") {
+            } else if (e.code == "KeyR") {
 				this.currentBlock.rotate();
 			}
 
 		}.bind(this), false);
-	}
+    }
+    
+    /** Checks to see whether a row is full of blocks. */
+    rowFull(row) {
+        var i = 0;
+        var col = 50;
+        var check = false;
+
+        while (i < 11) {
+            if (i === 10) {
+                check = true;
+                i = 11; 
+            } else if ((getElementsByXPath(`//*[@x='${col}'][@y='${row}']`).length) > 0) {
+                col = col + 18;
+                i++;
+            } else {
+                i = 11;
+            }
+        }
+        return check;
+    }
+
+    /** Clears a row of square. */
+    clearRow(row) {
+        var i = 0;
+        var col = 50;
+
+        while (i < 10) {
+            var square = getElementsByXPath(`//*[@x='${col}'][@y='${row}']`)[0];
+            square.parentNode.removeChild(square);
+            col = col + 18;
+            i++;
+        }
+    }
+
+    /** Shifts everything above a given row down 1 row after line clear. */
+    shiftDown(row) {
+        while (row > 9) {
+            var col = 50;
+            var i = 0;
+
+            while (i < 10) {
+                var square = getElementsByXPath(`//*[@x='${col}'][@y='${row}']`)[0];
+                if (square != null) {
+                    square.setAttribute("x", col);
+                    square.setAttribute("y", (row + 18)); 
+                }
+                col = col + 18;
+                i++;
+            }
+            row = row - 18;
+        }
+    }
+
+    /** Checks every line, clears it, and shifts the blocks down. */
+    checkRows() {
+        var row = 352
+        var linesCleared = 0;
+        
+        while (row > 9) {
+            if (this.rowFull(row)) {
+                this.clearRow(row);
+                this.shiftDown(row - 18);
+                linesCleared++;
+            } else {
+                row = row - 18;
+            }
+        }
+        return linesCleared;
+    }
 
 	/** Starts the game. */
 	async run() {
@@ -79,13 +150,20 @@ class TetrisGame {
 			while ((!(this.exit)) & (!(atBottom))) {
 				atBottom = this.currentBlock.atBottom();
 
-				await sleep(250);
+				await sleep(200);
 				if (!(this.currentBlock.obstruction())) {
 					this.currentBlock.descend();
 				} else {
 					atBottom = true;
 				}
-			}
+            }
+            
+            // check lines and update scoring
+            var roundScore = this.checkRows();
+            if (roundScore == 4) {
+                tetrisClears++;
+            }
+            lineClears = lineClears + roundScore;
 
 			// setup blocks for next drop loop
 			if (this.blockSet.length == 0) {
