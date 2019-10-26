@@ -8,7 +8,7 @@
 class Block {
 
 	/** Constructs a new Block. */
-	constructor(size, gapSize, x, y, id) {
+	constructor(size, gapSize, x, y, blockType, id) {
 		this.size = size;
 		this.gapSize = gapSize;
 		this.x = x;
@@ -16,14 +16,29 @@ class Block {
 		this.id = id;
 
 		this.direction = 0;
+		this.rotation = false;
 
-		this.type = this.getType();
+		this.type = this.getType(blockType);
 		this.coordinates = this.getCoordinates();
 	}
 
-	/** Returns the tetromino type code as 4-item array. */
-	getType() {
-		return [0, 1, 2, 6];
+	/** 
+	 * Returns the tetromino type code as 4-item array. The type code returned
+	 * is determined by the tetrisGame gameloop such that available block types
+	 * are randomly cycled through.
+	 */
+	getType(blockType) {
+		var typeCodes = [
+			[0, 1, 2, 3, "#00FFFF"],
+			[0, 1, 2, 6, "blue"],
+			[0, 1, 2, 4, "orange"],
+			[0, 1, 5, 6, "red"],
+			[1, 2, 4, 5, "green"],
+			[0, 1, 2, 5, "purple"],
+			[0, 1, 4, 5, "yellow"]
+		]
+
+		return typeCodes[blockType];
 	}
 
 	/** Uses a 4x4 matrix to hold the sets of coordinates needed for Block. */
@@ -48,7 +63,6 @@ class Block {
 			}
 			i++;
 		}
-
 		return coordinates;
 	}
 
@@ -66,11 +80,14 @@ class Block {
 			var square = document.createElementNS(xmlns, "rect");
 			square.setAttribute("x", pair[0]);
 			square.setAttribute("y", pair[1]);
-			square.setAttribute("rx", 2);
-			square.setAttribute("ry", 2);
+			square.setAttribute("rx", 1);
+			square.setAttribute("ry", 1);
 			square.setAttribute("width", this.size);
 			square.setAttribute("height", this.size);
 			square.setAttribute("id", this.id);
+			square.setAttribute("fill", this.type[4]);
+			square.setAttribute("stroke-width", 1.25);
+			square.setAttribute("stroke", "black");
 			g.appendChild(square);
 		}, this);
 	}
@@ -88,18 +105,30 @@ class Block {
 	 * the left or right wall.
 	 */
 	move() {
+		var xmax = Math.max(
+			this.coordinates[0][0], 
+			this.coordinates[1][0], 
+			this.coordinates[2][0], 
+			this.coordinates[3][0]
+		);
+		var xmin = Math.min(
+			this.coordinates[0][0], 
+			this.coordinates[1][0], 
+			this.coordinates[2][0], 
+			this.coordinates[3][0]
+		);
+
 		this.hide();
 
-		if (this.direction == 1) {
+		if ((this.direction == 1) & (xmin != 50)) {
 			this.coordinates.forEach(function(pair) {
 				pair[0] = pair[0] - (this.size + this.gapSize); 
 			}, this);
-		} else if (this.direction == 2) {
+		} else if ((this.direction == 2) & (xmax + 16 != 228)) {
 			this.coordinates.forEach(function(pair) {
 				pair[0] = pair[0] + (this.size + this.gapSize); 
 			}, this);
 		}
-
 		this.draw();
 	}
 
@@ -108,8 +137,26 @@ class Block {
 		this.direction = Adirection;
 	}
 
+	/** Moves Block one step down if doing so would not pass bottom wall. */
+	descend() {
+		this.hide();
+
+		this.coordinates.forEach(function(pair) {
+			pair[1] = pair[1] + (this.size + this.gapSize);
+		}, this);
+
+		this.draw();
+	}
+
 	/** Rotates the Block 90 degrees clockwise. */
 	rotate() {
+		// Get skew to ensure the Block aligns with 20x10 grid
+		if (!(this.rotation)) {
+			var skew = ((this.size + this.gapSize) / 2);
+		} else {
+			var skew = -((this.size + this.gapSize) / 2);
+		}
+		this.rotation = !(this.rotation);
 
 		// Get width and height of Block
 		var block = document.getElementById(this.id);
@@ -129,11 +176,54 @@ class Block {
 
 		this.coordinates.forEach(function(pair) {
 			var tempx = pair[0];
-			pair[0] = px + py - pair[1] - this.size;
-			pair[1] = tempx + py - px;  
+			pair[0] = (px + py - pair[1] - this.size) + skew;
+			pair[1] = (tempx + py - px) + skew;  
 		}, this);
 
 		this.draw();
 	}
 
+	/** Returns true if block has hit the lowest col of the board. */
+	atBottom() {
+		var check = false;
+		var ymax = Math.max(
+			this.coordinates[0][1], 
+			this.coordinates[1][1], 
+			this.coordinates[2][1], 
+			this.coordinates[3][1]
+		);
+
+		if (ymax == 334) {
+			check = true;
+		}
+
+		return check;
+	}
+
+	/** 
+	 * Checks to see whether an obstruction lies below the block. XPath queries
+	 * are used to check for blocks with coordinates that would match the 
+	 * position each square would descend to. 
+	 */
+	obstruction() {
+		var check = false;
+
+		this.coordinates.forEach(function(pair) {
+			var newx = pair[0];
+			var newy = pair[1] + this.size + this.gapSize;
+
+			var a = JSON.stringify(this.coordinates);
+			var b = JSON.stringify([newx, newy]);
+
+			if ((a.indexOf(b)) != -1) {
+				// pass
+			} else {
+				if ((getElementsByXPath(`//*[@x='${newx}'][@y='${newy}']`).length) > 0) {
+					check = true;
+				}
+			}
+		}, this);
+
+		return check;
+	}
 }
