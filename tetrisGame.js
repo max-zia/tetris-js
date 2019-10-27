@@ -1,11 +1,11 @@
 /** 
- * Represents a Tetris game.
+ * Represents a single game.
  */
 
 class TetrisGame {
 	
 	/** 
-     * Constructs a new TetrisGame instance. Every block that falls during
+     * Constructs a new game instance. Every block that falls during
      * the game is added to the blocks array, while blockSet array ensures
      * any sequence of seven blocks includes all tetromino types.  
      */
@@ -21,7 +21,9 @@ class TetrisGame {
 		this.blockSet = [0, 1, 2, 3, 4, 5, 6];
 		this.currentBlock = 0;
 		this.blocks = [];
-		this.blocks.push(new Block(16, 2, 104, 10, getRandomInt(0, 6), 1));
+        this.blocks.push(new Block(16, 2, 104, 10, getRandomInt(0, 6), 1));
+        
+        this.pause = false;
 	}
 
 	/** Draws the board to the screen. */
@@ -98,34 +100,41 @@ class TetrisGame {
 	/** Adds event listener to control user inputs. */
 	activateInput() {
 		document.addEventListener("keydown", function(e) {
+            // keys that work even when paused
 			if (e.code == "KeyQ") {
 				this.exit = true;
 
-			} else if (e.code == "ArrowRight") {
-				this.currentBlock.setDirection(2);
-				this.currentBlock.move();
+            } else if (e.code == "KeyP") {
+                this.pause = !(this.pause);
 
-			} else if (e.code == "ArrowLeft") {
-				this.currentBlock.setDirection(1);
-                this.currentBlock.move();
-            
-            } else if (e.code == "ArrowDown") {
-                this.currentBlock.hardDrop();
+            // keys that work only if not paused
+            } else if (!this.pause) {
 
-            } else if (e.code == "KeyE") {
-                if (this.canHold) {
-                    this.hold = true;
-                    var holdSwitchAudio = new Audio("sounds/holdSwitch.wav");
-                    holdSwitchAudio.play();
-                } else {
-                    var cannotHoldAudio = new Audio("sounds/cannotHold.wav");
-                    cannotHoldAudio.play();
-                }        
+                if (e.code == "ArrowRight") {
+                    this.currentBlock.setDirection(2);
+                    this.currentBlock.move();
 
-             } else if (e.code == "KeyR") {
-				this.currentBlock.rotate();
-			}
+                } else if (e.code == "ArrowLeft") {
+                    this.currentBlock.setDirection(1);
+                    this.currentBlock.move();
+                
+                } else if (e.code == "ArrowDown") {
+                    this.currentBlock.hardDrop();
 
+                } else if (e.code == "KeyE") {
+                    if (this.canHold) {
+                        this.hold = true;
+                        var holdSwitchAudio = new Audio("sounds/holdSwitch.wav");
+                        holdSwitchAudio.play();
+                    } else {
+                        var cannotHoldAudio = new Audio("sounds/cannotHold.wav");
+                        cannotHoldAudio.play();
+                    }        
+
+                } else if (e.code == "KeyR") {
+                    this.currentBlock.rotate();
+                }
+            }   
 		}.bind(this), false);
     }
     
@@ -331,6 +340,13 @@ class TetrisGame {
                 if (atBottom) {
                     blockPlacedAudio.play();
                 }
+
+                // if pause, wait for unpause
+                if (this.pause) {
+                    while ((this.pause) & (!(this.exit))) {
+                        await sleep(200);
+                    }
+                }
             }
 
             // check for line clears and update scoring
@@ -364,6 +380,3 @@ class TetrisGame {
 		}
 	}
 }
-
-var main = new TetrisGame();
-main.run();
